@@ -1,33 +1,44 @@
-pipeline{
-    agent any
-
-    tools {
-        nodejs 'nodejs 24.5.0'   
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: nodejs
+    image: node:24.5.0
+    command: ['sleep']
+    args: ['infinity']
+'''
+        }
     }
-
     stages {
-        stage('build'){
+        stage('build') {
             when {
                 changeset "**/result/**"
             }
             steps {
-                echo 'Compiling result app..'
-                dir('result'){
-                    sh 'npm install'
+                container('nodejs') {
+                    echo 'Compiling result app..'
+                    dir('result') {
+                        sh 'npm install'
+                    }
                 }
             }
         }
         
-        stage('test'){
+        stage('test') {
             when {
                 changeset '**/result/**'
             }
-            steps{
-                echo 'Running Unit Tests on result app..'
-                dir('result'){
-                    sh '''npm install
-                          npm test
-                       '''
+            steps {
+                container('nodejs') {
+                    echo 'Running Unit Tests on result app..'
+                    dir('result') {
+                        sh '''npm install
+                              npm test'''
+                    }
                 }
             }
         }
