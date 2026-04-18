@@ -34,7 +34,7 @@ spec:
         // ==========================================
         // WORKER APP STAGES
         // ==========================================
-        stage("Worker - Build") {
+        stage("Worker  - Build") {
             when { changeset "**/worker/**" }
             steps {
                 container('maven') {
