@@ -10,6 +10,10 @@ spec:
     image: maven:3.8.7-openjdk-18-slim
     command: ['sleep']
     args: ['infinity']
+  - name: argocd-cli
+    image: schoolofdevops/argocd-cli
+    command: ['sleep']
+    args: ['infinity']
   - name: nodejs
     image: node:24.5.0
     command: ['sleep']
@@ -167,18 +171,51 @@ spec:
         }
 
         // ==========================================
-        // DEPLOYMENT STAGE
+        // GITOPS DEPLOYMENT STAGES
         // ==========================================
-        stage('Deploy to Dev') {
-            when {
-                // Ensure deployment only happens from the main branch
-                branch 'main'
+        stage('Update Manifests in Git') {
+            when { branch 'main' }
+            steps {
+                container('python') {
+                    echo 'Updating Kubernetes manifests with new image tags...'
+                    withCredentials([usernamePassword(credentialsId: 'github_jenkins_token', passwordVariable: 'GIT_PASS', usernameVariable: 'GIT_USER')]) {
+                        sh """
+                            # 1. Replace the entire image string, regardless of what is currently there
+                            sed -i "s|image: .*|image: emmiduh93/worker:v\${BUILD_ID}|g" k8s-specifications/worker.yaml
+                            sed -i "s|image: .*|image: emmiduh93/result:v\${BUILD_ID}|g" k8s-specifications/result.yaml
+                            sed -i "s|image: .*|image: emmiduh93/vote:v\${BUILD_ID}|g" k8s-specifications/vote.yaml
+
+                            # 2. Configure Git
+                            git config --global user.email "jenkins@votingapp.local"
+                            git config --global user.name "Jenkins Automation"
+
+                            # 3. Commit the updated files
+                            git add k8s-specifications/*.yaml
+                            git commit -m "Update K8s manifests to build v\${BUILD_ID} [skip ci]" || echo "No changes to commit"
+
+                            # 4. Push the changes back to GitHub
+                            git push https://\${GIT_USER}:\${GIT_PASS}@github.com/emmiduh/voting-app.git HEAD:main
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Sync with ArgoCD') {
+            when { branch 'main' }
+            environment {
+                ARGO_SERVER = 'argocd-server.argocd.svc.cluster.local:443'
+                AUTH_TOKEN = credentials('argocd-jenkins-deployer-token')  
             }
             steps {
-                container('kubectl') {
-                    echo 'Applying Kubernetes manifests to Dev environment...'
-                    sh 'kubectl create namespace voting-app --dry-run=client -o yaml | kubectl apply -f -'
-                    sh 'kubectl apply -n voting-app -f k8s-specifications/'
+                container('argocd-cli') {
+                    sh '''
+                        echo "Triggering Git Refresh..."
+                        argocd app sync votingapp --insecure --server $ARGO_SERVER --auth-token $AUTH_TOKEN
+                        
+                        echo "Waiting for Health Status..."
+                        argocd app wait votingapp --health --timeout 300 --insecure --server $ARGO_SERVER --auth-token $AUTH_TOKEN
+                    '''
                 }
             }
         }
