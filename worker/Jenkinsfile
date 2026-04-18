@@ -68,14 +68,15 @@ spec:
             }
             steps {
                 container('docker') {
-                    echo 'Packaging worker app with docker'
+                    echo 'Packaging worker app with native docker commands'
                     script {
-                        // Point the Docker client to the Docker-in-Docker daemon
                         withEnv(['DOCKER_HOST=tcp://localhost:2375']) {
-                            docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') { 
-                                def workerImage = docker.build("emmiduh93/worker:v${env.BUILD_ID}", "./worker")
-                                workerImage.push("${env.BRANCH_NAME}")
-                                workerImage.push("latest")
+                            withCredentials([usernamePassword(credentialsId: 'dockerlogin', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                                sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                                sh "docker build -t emmiduh93/worker:v${env.BUILD_ID} ./worker"
+                                sh "docker push emmiduh93/worker:v${env.BUILD_ID}"
+                                sh "docker tag emmiduh93/worker:v${env.BUILD_ID} emmiduh93/worker:latest"
+                                sh "docker push emmiduh93/worker:latest"
                             }
                         }
                     }
