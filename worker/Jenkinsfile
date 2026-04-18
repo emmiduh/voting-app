@@ -64,7 +64,7 @@ spec:
         stage('docker-package') {
             when {
                 changeset "**/worker/**"
-                branch 'master'
+                branch 'main'
             }
             steps {
                 container('docker') {
