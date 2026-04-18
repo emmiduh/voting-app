@@ -10,6 +10,10 @@ spec:
     image: node:24.5.0
     command: ['sleep']
     args: ['infinity']
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command: ['sleep']
+    args: ['infinity']
 '''
         }
     }
@@ -41,6 +45,38 @@ spec:
                     }
                 }
             }
+        }
+
+        stage('docker-package') {
+            when {
+                changeset "**/result/**"
+                branch 'main'
+            }
+            steps {
+                container('kaniko') {
+                    echo 'Building and pushing image securely using Kaniko'
+                    withCredentials([usernamePassword(credentialsId: 'dockerlogin', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                        sh '''
+                            # 1. Create the Docker config.json file
+                            mkdir -p /kaniko/.docker
+                            AUTH=$(echo -n "$DOCKER_USER:$DOCKER_PASS" | base64 | tr -d '\n')
+                            echo "{\\"auths\\":{\\"https://index.docker.io/v1/\\":{\\"auth\\":\\"${AUTH}\\"}}}" > /kaniko/.docker/config.json
+                            
+                            # 2. Execute Kaniko for the result app
+                            /kaniko/executor \
+                                --context `pwd`/result \
+                                --dockerfile `pwd`/result/Dockerfile \
+                                --destination emmiduh93/result:v${BUILD_ID} \
+                                --destination emmiduh93/result:latest
+                        '''
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Building multibranch pipeline for result is completed..'
         }
     }
 }
