@@ -179,30 +179,34 @@ spec:
         // ==========================================
         // GITOPS DEPLOYMENT STAGES
         // ==========================================
-        stage('Update Manifests in Git') {
+	stage('Update Manifests in Git') {
             when { branch 'main' }
             steps {
                 container('git') {
                     echo 'Updating Kubernetes manifests with new image tags...'
                     withCredentials([usernamePassword(credentialsId: 'github_jenkins_token', passwordVariable: 'GIT_PASS', usernameVariable: 'GIT_USER')]) {
                         sh """
-                            # 1. Replace the entire image string, regardless of what is currently there
+                            # 1. Configure Git first
+                            git config --global --add safe.directory '*'
+                            git config --global user.email "jenkins@votingapp.local"
+                            git config --global user.name "Jenkins Automation"
+
+                            # 2. Fetch the absolute latest 'main' branch from GitHub and switch to it
+                            # This guarantees we don't have merge conflicts!
+                            git fetch https://\${GIT_USER}:\${GIT_PASS}@github.com/emmiduh/voting-app.git main
+                            git checkout -B main FETCH_HEAD
+
+                            # 3. NOW update the YAML files on the newest code
                             sed -i "s|image: .*|image: emmiduh93/worker:v\${BUILD_ID}|g" k8s-specifications/worker.yaml
                             sed -i "s|image: .*|image: emmiduh93/result:v\${BUILD_ID}|g" k8s-specifications/result.yaml
                             sed -i "s|image: .*|image: emmiduh93/vote:v\${BUILD_ID}|g" k8s-specifications/vote.yaml
 
-                            # 2. Configure Git
-			    git config --global --add safe.directory '*'
-                            git config --global user.email "jenkins@votingapp.local"
-                            git config --global user.name "Jenkins Automation"
-
-                            # 3. Commit the updated files
+                            # 4. Commit the updated files
                             git add k8s-specifications/*.yaml
                             git commit -m "Update K8s manifests to build v\${BUILD_ID} [skip ci]" || echo "No changes to commit"
 
-                            # 4. Push the changes back to GitHub
-			    git pull --rebase https://\${GIT_USER}:\${GIT_PASS}@github.com/emmiduh/voting-app.git main
-                            git push https://\${GIT_USER}:\${GIT_PASS}@github.com/emmiduh/voting-app.git HEAD:main
+                            # 5. Push straight to GitHub
+                            git push https://\${GIT_USER}:\${GIT_PASS}@github.com/emmiduh/voting-app.git main
                         """
                     }
                 }
