@@ -201,6 +201,7 @@ spec:
                             git commit -m "Update K8s manifests to build v\${BUILD_ID} [skip ci]" || echo "No changes to commit"
 
                             # 4. Push the changes back to GitHub
+			    git pull --rebase https://\${GIT_USER}:\${GIT_PASS}@github.com/emmiduh/voting-app.git main
                             git push https://\${GIT_USER}:\${GIT_PASS}@github.com/emmiduh/voting-app.git HEAD:main
                         """
                     }
