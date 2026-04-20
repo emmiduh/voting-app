@@ -6,6 +6,12 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
+  - name: git
+    image: bitnami/git:latest
+    command: ['sleep']
+    args: ['infinity']
+    securityContext:
+      runAsUser: 0
   - name: maven
     image: maven:3.8.7-openjdk-18-slim
     command: ['sleep']
@@ -176,7 +182,7 @@ spec:
         stage('Update Manifests in Git') {
             when { branch 'main' }
             steps {
-                container('python') {
+                container('git') {
                     echo 'Updating Kubernetes manifests with new image tags...'
                     withCredentials([usernamePassword(credentialsId: 'github_jenkins_token', passwordVariable: 'GIT_PASS', usernameVariable: 'GIT_USER')]) {
                         sh """
