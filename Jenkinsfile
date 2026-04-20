@@ -192,6 +192,7 @@ spec:
                             sed -i "s|image: .*|image: emmiduh93/vote:v\${BUILD_ID}|g" k8s-specifications/vote.yaml
 
                             # 2. Configure Git
+			    git config --global --add safe.directory '*'
                             git config --global user.email "jenkins@votingapp.local"
                             git config --global user.name "Jenkins Automation"
 
