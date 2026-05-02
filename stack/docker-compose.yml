@@ -13,7 +13,7 @@ services:
 
   vote:
     image: ${VOTE_IMAGE}
-    ports: ["80"]
+    ports: ["8666:80"]
     depends_on:
       - redis
       - db
@@ -23,7 +23,7 @@ services:
 
   result:
     image: ${RESULT_IMAGE}
-    ports: ["80"]
+    ports: ["8667:80"]
     depends_on:
       - redis
       - db
