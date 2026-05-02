@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: vote
-        image: emmiduh93/vote:v291
+        image: emmiduh93/vote:v292
         ports:
         - containerPort: 80
           name: web
