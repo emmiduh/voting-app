@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: result
-        image: emmiduh93/result:v321
+        image: emmiduh93/result:v322
         ports:
         - containerPort: 80
           name: web
