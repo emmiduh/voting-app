@@ -16,4 +16,4 @@ spec:
     spec:
       containers:
       - name: worker
-        image: emmiduh93/worker:v311
+        image: emmiduh93/worker:v312
