@@ -33,6 +33,8 @@ services:
 
   worker:
     image: ${WORKER_IMAGE}
+    environment:
+    - JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport
     depends_on:
       - redis
       - db
